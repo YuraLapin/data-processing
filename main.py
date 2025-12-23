@@ -56,7 +56,7 @@ def parse_citilink_product(html):
 
     
 
-url = "https://www.citilink.ru/product/televizor-led-tcl-55-55p7k-smart-chernyi-4k-ultra-hd-dvb-t-60hz-dvb-t2-2088653/properties/"  # Пример ссылки на товар
+url = "https://www.citilink.ru/product/televizor-led-tcl-55-55p7k-smart-chernyi-4k-ultra-hd-dvb-t-60hz-dvb-t2-2088653/properties/" 
 html_content = fetch_page(url)
 data = parse_citilink_product(html_content)
 print(json.dumps(data, ensure_ascii=False, indent=2))
