@@ -3,6 +3,13 @@ import json
 import re
 from bs4 import BeautifulSoup
 
+import os
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+
 def fetch_page(url):
     try:
         session = requests.Session()
@@ -52,11 +59,24 @@ def parse_citilink_product(html):
 
     return product_data
 
+def write_to_pdf(header, contents):
+    font_path = 'DejaVuSans.ttf'
+    pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+    c = canvas.Canvas("output.pdf", pagesize=letter)
 
+    c.setFont("DejaVu", 24)
+    c.drawString(50, 750, header)
 
-    
+    c.setFont("DejaVu", 16)
+    c.drawString(50, 700, contents)
+
+    c.save()
+
 
 url = "https://www.citilink.ru/product/televizor-led-tcl-55-55p7k-smart-chernyi-4k-ultra-hd-dvb-t-60hz-dvb-t2-2088653/properties/" 
 html_content = fetch_page(url)
 data = parse_citilink_product(html_content)
-print(json.dumps(data, ensure_ascii=False, indent=2))
+pretty_data = json.dumps(data, ensure_ascii=False, indent=2)
+print(pretty_data)
+
+write_to_pdf('Анализ товара', pretty_data)
