@@ -3,10 +3,16 @@ import json
 import re
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
+import os
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
 
 def fetch_page(url):
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url)
         response.raise_for_status()
         return response.text
     except Exception as e:
@@ -34,7 +40,6 @@ def fetch_full_html(url):
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto(url)
-        page.wait_for_load_state("networkidle")
         html = page.content()
         browser.close()
         return html
@@ -76,7 +81,23 @@ def parse_citilink_product(url):
 
     return product
 
+def write_to_pdf(header, contents):
+    font_path = 'DejaVuSans.ttf'
+    pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+    c = canvas.Canvas("output.pdf", pagesize=letter)
+
+    c.setFont("DejaVu", 24)
+    c.drawString(50, 750, header)
+
+    c.setFont("DejaVu", 16)
+    c.drawString(50, 700, contents)
+
+    c.save()
+
+
 url = "https://www.citilink.ru/product/televizor-led-tcl-55-55p7k-smart-chernyi-4k-ultra-hd-dvb-t-60hz-dvb-t2-2088653/"
 data = parse_citilink_product(url)
+pretty_data = json.dumps(data, ensure_ascii=False, indent=2)
+print(pretty_data)
 
-print(json.dumps(data, ensure_ascii=False, indent=2))
+write_to_pdf('Анализ товара', pretty_data)
