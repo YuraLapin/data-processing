@@ -2,61 +2,81 @@ import requests
 import json
 import re
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 def fetch_page(url):
     try:
-        session = requests.Session()
-        response = session.get(url, timeout=10)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
-        
-        if len(response.text) > 10000:
-            return response.text
-        else:
-            print("Получена слишком короткая страница, возможно блокировка")
-            return None
+        return response.text
     except Exception as e:
-        print(f"Ошибка загрузки: {e}")
+        print("Ошибка загрузки:", e)
         return None
 
-def parse_citilink_product(html):
-    soup = BeautifulSoup(html, 'html.parser')
+def parse_basic_info(html):
+    soup = BeautifulSoup(html, "html.parser")
+
+    title = None
+    price = None
+
     title_tag = soup.find("h1")
-    title = title_tag.get_text(strip=True) if title_tag else None
-    
+    if title_tag:
+        title = title_tag.get_text(strip=True)
+
     price_tag = soup.find(attrs={"data-meta-price": True})
-    price = price_tag["data-meta-price"] if price_tag else None
+    if price_tag:
+        price = price_tag["data-meta-price"]
 
-    characteristics = soup.find_all('div', {'class': lambda x: x and any(
-        cls.endswith('-PropertiesItem') for cls in (x if isinstance(x, list) else [x])
-    )})
+    return title, price
 
-    
-    description_tag = soup.find("div", attrs={"data-testid": "product-description"})
-    description = description_tag.get_text(" ", strip=True) if description_tag else None
+def fetch_full_html(url):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(url)
+        page.wait_for_load_state("networkidle")
+        html = page.content()
+        browser.close()
+        return html
 
-    rating_tag = soup.find(attrs={"data-meta-rating": True})
-    rating = rating_tag["data-meta-rating"] if rating_tag else None
+def parse_characteristics(html):
+    soup = BeautifulSoup(html, "html.parser")
+    characteristics = {}
 
-    code_tag = soup.find('span', {'class': lambda x: x and 'code' in x.lower()})
-    code = code_tag.get_text()
+    items = soup.select("div[class*='PropertiesItem']")
+    for item in items:
+        name_tag = item.select_one("span[class*='PropertiesItemTitle']")
+        value_tag = item.select_one("span[class*='PropertiesValue']")
 
-    product_data = {
+        if name_tag and value_tag:
+            name = name_tag.get_text(strip=True)
+            value = value_tag.get_text(strip=True)
+            characteristics[name] = value
+
+    return characteristics
+
+def parse_citilink_product(url):
+    html = fetch_page(url)
+    if not html:
+        return None
+
+    title, price = parse_basic_info(html)
+
+    properties_url = url.rstrip("/") + "/properties/"
+    full_html = fetch_full_html(properties_url)
+
+    characteristics = parse_characteristics(full_html)
+
+    product = {
         "title": title,
         "price": price,
-        "description": description,
         "characteristics": characteristics,
-        "rating": rating,
-        "source": "citilink",
-        "code": code
+        "source": "citilink"
     }
 
-    return product_data
+    return product
 
+url = "https://www.citilink.ru/product/televizor-led-tcl-55-55p7k-smart-chernyi-4k-ultra-hd-dvb-t-60hz-dvb-t2-2088653/"
+data = parse_citilink_product(url)
 
-
-    
-
-url = "https://www.citilink.ru/product/televizor-led-tcl-55-55p7k-smart-chernyi-4k-ultra-hd-dvb-t-60hz-dvb-t2-2088653/properties/" 
-html_content = fetch_page(url)
-data = parse_citilink_product(html_content)
 print(json.dumps(data, ensure_ascii=False, indent=2))
