@@ -8,7 +8,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-
+import ollama
 
 def fetch_page(url):
     try:
@@ -81,6 +81,18 @@ def parse_citilink_product(url):
 
     return product
 
+def ask_ollama(product_json):
+    prompt = f"Анализируй этот товар:\n{product_json}\n\nОтветь кратко (3-5 строк)"
+
+    try:
+        response = ollama.chat(
+            model='llama3.2:3b',
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        return response['message']['content']
+    except:
+        return "Запустите Ollama: ollama serve"
+
 def write_to_pdf(header, contents):
     font_path = 'DejaVuSans.ttf'
     pdfmetrics.registerFont(TTFont('DejaVu', font_path))
@@ -100,4 +112,6 @@ data = parse_citilink_product(url)
 pretty_data = json.dumps(data, ensure_ascii=False, indent=2)
 print(pretty_data)
 
-write_to_pdf('Анализ товара', pretty_data)
+ai_answer = ask_ollama(pretty_data)
+
+write_to_pdf('Анализ товара', ai_answer)
