@@ -1,5 +1,5 @@
 import ollama
-
+import re
 
 def ask_ollama(product_data):
     title = product_data.get('title', '')
@@ -54,3 +54,43 @@ def ask_ollama(product_data):
         return response['message']['content']
     except Exception as e:
         return f"Ошибка: {str(e)}. Запустите Ollama: ollama serve"
+
+def parse_ollama_response(ai_response):
+    result = {
+        'rating': '',
+        'pros': [],
+        'cons': [],
+        'summary': ''
+    }
+
+    lines = ai_response.split('\n')
+    section = None
+
+    for line in lines:
+        line = line.strip()
+
+        if not line:
+            continue
+
+        if '**Оценка:**' in line:
+            result['rating'] = line.replace('**Оценка:**', '').strip()
+        elif '**Плюсы:**' in line or 'Плюсы:' in line:
+            section = 'pros'
+        elif '**Минусы:**' in line or 'Минусы:' in line:
+            section = 'cons'
+        elif '**Вывод:**' in line or 'Вывод:' in line:
+            section = 'summary'
+            if ':' in line:
+                result['summary'] = line.split(':', 1)[1].strip()
+        else:
+            if section == 'pros' and line.startswith(('1.', '2.', '3.')):
+                clean_line = re.sub(r'^\d+\.\s*', '', line)
+                result['pros'].append(clean_line)
+            elif section == 'cons' and line.startswith(('1.', '2.')):
+                clean_line = re.sub(r'^\d+\.\s*', '', line)
+                result['cons'].append(clean_line)
+            elif section == 'summary' and not result['summary']:
+                result['summary'] += ' ' + line
+                result['summary'] = result['summary'].strip()
+
+    return result

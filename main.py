@@ -10,6 +10,9 @@ pretty_data = json.dumps(data, ensure_ascii=False, indent=2)
 print(pretty_data)
 
 ai_answer = ai_module.ask_ollama(data)
+parsed = ai_module.parse_ollama_response(ai_answer)
+pretty_parsed = json.dumps(parsed, ensure_ascii=False, indent=2)
+print(pretty_parsed)
 
 pdf_export_module.write_to_pdf(["Анализ товара:", data["title"]], ai_answer.split("\n"))
 export_html_txt.write_to_html('Анализ товара', ai_answer)
