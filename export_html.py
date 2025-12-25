@@ -49,3 +49,12 @@ def write_to_html(header, contents, filename="output.html"):
     with open(filename, "w", encoding="utf-8") as f:
         f.write(html_content)
     print(f"HTML-файл сохранён как {os.path.abspath(filename)}")
+
+def write_to_txt(header, contents, filename="output.txt"):
+    txt_content = f"{header}\n{'='*len(header)}\n\n{contents}"
+
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(txt_content)
+    print(f"Текстовый файл сохранён как {os.path.abspath(filename)}")
+
+
